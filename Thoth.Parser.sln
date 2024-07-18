@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EasyBuild", "build\EasyBuild.fsproj", "{331DF203-1D9A-4DBB-BD59-996E133F6FE9}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Thoth.Parser", "src\Thoth.Parser.fsproj", "{EA3A3C14-9A1A-40A9-BF3F-E3376A6518C1}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Thoth.Parser.Tests", "tests\Thoth.Parser.Tests.fsproj", "{8F3919CE-C16A-47DE-A951-4FA86A7FF7A5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{331DF203-1D9A-4DBB-BD59-996E133F6FE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{331DF203-1D9A-4DBB-BD59-996E133F6FE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{331DF203-1D9A-4DBB-BD59-996E133F6FE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{331DF203-1D9A-4DBB-BD59-996E133F6FE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA3A3C14-9A1A-40A9-BF3F-E3376A6518C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA3A3C14-9A1A-40A9-BF3F-E3376A6518C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA3A3C14-9A1A-40A9-BF3F-E3376A6518C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA3A3C14-9A1A-40A9-BF3F-E3376A6518C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F3919CE-C16A-47DE-A951-4FA86A7FF7A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F3919CE-C16A-47DE-A951-4FA86A7FF7A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F3919CE-C16A-47DE-A951-4FA86A7FF7A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F3919CE-C16A-47DE-A951-4FA86A7FF7A5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

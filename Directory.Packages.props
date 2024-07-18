@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Fable.Pyxpecto" Version="1.2.0" />
+    <PackageVersion Include="FSharp.Core" Version="8.0.101" />
+  </ItemGroup>
+</Project>
