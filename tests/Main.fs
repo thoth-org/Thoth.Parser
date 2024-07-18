@@ -4,5 +4,5 @@ open Fable.Pyxpecto
 
 [<EntryPoint>]
 let main argv =
-    testList "All" [ Parser.LowLevel.all; Parser.Simple.tests ]
+    testList "All" [ LowLevel.tests; Base.tests; Simple.tests ]
     |> Pyxpecto.runTests [||]

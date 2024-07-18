@@ -1,5 +1,5 @@
 [<AutoOpen>]
-module Prelude
+module Thoth.Parser.Tests.Prelude
 
 open Fable.Pyxpecto
 

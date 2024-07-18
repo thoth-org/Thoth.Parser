@@ -1,4 +1,4 @@
-module Thoth.Parser.Tests.Parser.Simple
+module Thoth.Parser.Tests.Simple
 
 open Fable.Pyxpecto
 open Thoth.Parser

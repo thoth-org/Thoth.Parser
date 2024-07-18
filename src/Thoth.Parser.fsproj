@@ -4,9 +4,10 @@
         <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="Types.fs" />
+        <Compile Include="Prelude.fs" />
         <Compile Include="LowLevel.fs" />
-        <Compile Include="Base.fs" />
+        <Compile Include="Base.Types.fs" />
+        <Compile Include="Base.Parser.fs" />
         <Compile Include="Simple.fs" />
     </ItemGroup>
 </Project>
