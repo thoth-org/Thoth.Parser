@@ -143,20 +143,19 @@ type CharMatchAtResult =
 ///
 ///     It is <c>offset + 1</c> if the character is encoded on 1 byte in UTF-16 and <c>offset + 2</c> if the character is encoded on 2 bytes in UTF-16.
 /// </returns>
-let charMatchAt (predicate: string -> bool) (offset: int) (text: string) =
+let charMatchAt (predicate: Rune -> bool) (offset: int) (text: string) =
     if text.Length <= offset then
         CharMatchAtResult.NoMatch
     else
-        let runeChar = Rune.GetRuneAt(text, offset)
-        let charText = runeChar.ToString()
+        let rune = Rune.GetRuneAt(text, offset)
 
-        if runeChar.Utf16SequenceLength = 2 then
-            if predicate charText then
+        if rune.Utf16SequenceLength = 2 then
+            if predicate rune then
                 CharMatchAtResult.Match(offset + 2)
             else
                 CharMatchAtResult.NoMatch
-        else if predicate charText then
-            if runeChar.Value = 10 then
+        else if predicate rune then
+            if rune.Value = 10 then
                 CharMatchAtResult.NewLine
             else
                 CharMatchAtResult.Match(offset + 1)

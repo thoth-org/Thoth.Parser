@@ -2,6 +2,7 @@ module Thoth.Parser.Tests.Base
 
 open Fable.Pyxpecto
 open Thoth.Parser.Base
+open System.Text
 
 [<RequireQualifiedAccess>]
 type Problem =
@@ -9,6 +10,16 @@ type Problem =
     | ExpectingEnd
     | UnexpectedChar
 
+/// <summary>
+/// Helpers function to easily create a Token
+///
+/// This is equivalent to the function in the Simple module, but this Test file is about
+/// testing the Base module, so I don't want to import the Simple module.
+///
+/// I want this test file to be representative of how people would use the Base module.
+/// </summary>
+/// <param name="str"></param>
+/// <returns></returns>
 let mkToken (str: string) = Token(str, Problem.Expecting str)
 
 let tests =
@@ -54,10 +65,7 @@ let tests =
                 testCase
                     "return Ok if the parser succeeds"
                     (fun () ->
-                        let parser =
-                            Parser.chompIf
-                                (fun c -> c.ToLowerInvariant() = c)
-                                Problem.UnexpectedChar
+                        let parser = Parser.chompIf (fun _ -> true) Problem.UnexpectedChar
 
                         let actual = Parser.run parser "a"
 
@@ -67,10 +75,7 @@ let tests =
                 testCase
                     "return an Error if the parser fails"
                     (fun () ->
-                        let parser =
-                            Parser.chompIf
-                                (fun c -> c.ToLowerInvariant() = c)
-                                Problem.UnexpectedChar
+                        let parser = Parser.chompIf (fun _ -> false) Problem.UnexpectedChar
 
                         let actual = Parser.run parser "A"
 
@@ -92,7 +97,7 @@ let tests =
                     "new line is handled correctly"
                     (fun () ->
                         let (Parser parse) =
-                            Parser.chompIf (fun c -> c = "\n") Problem.UnexpectedChar
+                            Parser.chompIf (fun c -> c = Rune '\n') Problem.UnexpectedChar
 
                         let actual = parse (State.Initial<obj> "\nSecondLine")
 
@@ -123,7 +128,10 @@ let tests =
                 testCase
                     "chomp until the predicate fails"
                     (fun () ->
-                        let (Parser parse) = Parser.chompWhile (fun c -> c.ToLowerInvariant() = c)
+                        let (Parser parse) =
+                            Parser.chompWhile (fun rune ->
+                                rune.ToString().ToLowerInvariant() = rune.ToString()
+                            )
 
                         let actual = parse (State.Initial<obj> "abcB")
 
@@ -149,7 +157,7 @@ let tests =
                 testCase
                     "chomp until the end of the string"
                     (fun () ->
-                        let (Parser parse) = Parser.chompWhile (fun c -> c.ToLowerInvariant() = c)
+                        let (Parser parse) = Parser.chompWhile (fun _ -> true)
 
                         let actual = parse (State.Initial<obj> "abc")
 
@@ -176,7 +184,10 @@ let tests =
                     "support new line"
                     (fun () ->
                         let (Parser parse) =
-                            Parser.chompWhile (fun c -> c.ToLowerInvariant() = c || c = "\n")
+                            Parser.chompWhile (fun rune ->
+                                rune.ToString().ToLowerInvariant() = rune.ToString()
+                                || rune = Rune '\n'
+                            )
 
                         let actual = parse (State.Initial<obj> "abc\ndef\nA")
 
@@ -421,7 +432,9 @@ let tests =
                     "returns the chomped string"
                     (fun () ->
                         let (Parser parse) =
-                            Parser.getChompedString (Parser.chompWhile (fun c -> c = "a"))
+                            Parser.getChompedString (
+                                Parser.chompWhile (fun rune -> rune = Rune 'a')
+                            )
 
                         let actual = parse (State.Initial<obj> "aaaaaabb")
 
@@ -583,61 +596,65 @@ let tests =
                     )
             ]
 
-        ftestList
-            "int"
+        testList
+            "int32"
             [
-                // testCase "parses a single digit" (fun () ->
-                //     let (Parser parse) = int "Invalid number"
+                testCase
+                    "parses a single digit"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
 
-                //     let actual = parse (State.Initial<obj> "1")
+                        let actual = parse (State.Initial<obj> "1")
 
-                //     Assert.equal (
-                //         actual,
-                //         ParserStep.Success
-                //             {
-                //                 Backtrackable = true
-                //                 Value = 1
-                //                 State =
-                //                     {
-                //                         Source = "1"
-                //                         Offset = 1
-                //                         Indent = 0
-                //                         Context = []
-                //                         Row = 1
-                //                         Column = 2
-                //                     }
-                //             }
-                //     )
-                // )
-
-                // testCase "parses a multi digit number" (fun () ->
-                //     let (Parser parse) = int "Invalid number"
-
-                //     let actual = parse (State.Initial<obj> "123")
-
-                //     Assert.equal (
-                //         actual,
-                //         ParserStep.Success
-                //             {
-                //                 Backtrackable = true
-                //                 Value = 123
-                //                 State =
-                //                     {
-                //                         Source = "123"
-                //                         Offset = 3
-                //                         Indent = 0
-                //                         Context = []
-                //                         Row = 1
-                //                         Column = 4
-                //                     }
-                //             }
-                //     )
-                // )
+                        Assert.equal (
+                            actual,
+                            ParserStep.Success
+                                {
+                                    Backtrackable = true
+                                    Value = 1
+                                    State =
+                                        {
+                                            Source = "1"
+                                            Offset = 1
+                                            Indent = 0
+                                            Context = []
+                                            Row = 1
+                                            Column = 2
+                                        }
+                                }
+                        )
+                    )
 
                 testCase
-                    "parses a number with a sign"
+                    "parses a multi digit number"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign"
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+
+                        let actual = parse (State.Initial<obj> "123")
+
+                        Assert.equal (
+                            actual,
+                            ParserStep.Success
+                                {
+                                    Backtrackable = true
+                                    Value = 123
+                                    State =
+                                        {
+                                            Source = "123"
+                                            Offset = 3
+                                            Indent = 0
+                                            Context = []
+                                            Row = 1
+                                            Column = 4
+                                        }
+                                }
+                        )
+                    )
+
+                testCase
+                    "parses a negative number"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "-123")
 
@@ -656,6 +673,110 @@ let tests =
                                             Row = 1
                                             Column = 5
                                         }
+                                }
+                        )
+                    )
+
+                testCase
+                    "parses a positive number"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+
+                        let actual = parse (State.Initial<obj> "123")
+
+                        Assert.equal (
+                            actual,
+                            ParserStep.Success
+                                {
+                                    Backtrackable = true
+                                    Value = 123
+                                    State =
+                                        {
+                                            Source = "123"
+                                            Offset = 3
+                                            Indent = 0
+                                            Context = []
+                                            Row = 1
+                                            Column = 4
+                                        }
+                                }
+                        )
+                    )
+
+                testCase
+                    "rejects if the number is not valid"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+
+                        let actual = parse (State.Initial<obj> "abc")
+
+                        Assert.equal (
+                            actual,
+                            ParserStep.Failed
+                                {
+                                    Backtrackable = true
+                                    Bag =
+                                        AddRight(
+                                            Empty,
+                                            {
+                                                Row = 1
+                                                Column = 1
+                                                Problem = "Invalid number"
+                                                ContextStack = []
+                                            }
+                                        )
+                                }
+                        )
+                    )
+
+                testCase
+                    "rejects if number is too small"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+
+                        let actual = parse (State.Initial<obj> "-2147483649")
+
+                        Assert.equal (
+                            actual,
+                            ParserStep.Failed
+                                {
+                                    Backtrackable = true
+                                    Bag =
+                                        AddRight(
+                                            Empty,
+                                            {
+                                                Row = 1
+                                                Column = 12
+                                                Problem = "Invalid number"
+                                                ContextStack = []
+                                            }
+                                        )
+                                }
+                        )
+                    )
+
+                testCase
+                    "rejects if number is too big"
+                    (fun () ->
+                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+
+                        let actual = parse (State.Initial<obj> "2147483648")
+
+                        Assert.equal (
+                            actual,
+                            ParserStep.Failed
+                                {
+                                    Backtrackable = true
+                                    Bag =
+                                        AddRight(
+                                            Empty,
+                                            {
+                                                Row = 1
+                                                Column = 11
+                                                Problem = "Invalid number"
+                                                ContextStack = []
+                                            }
+                                        )
                                 }
                         )
                     )

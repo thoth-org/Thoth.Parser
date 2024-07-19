@@ -1,6 +1,7 @@
 namespace Thoth.Parser
 
 open Thoth.Parser
+open System.Text
 
 [<RequireQualifiedAccess>]
 type Problem =
@@ -103,10 +104,10 @@ module Parser =
 
     let getChompedString (parser: Parser<'A>) : Parser<string> = Base.Parser.getChompedString parser
 
-    let chompIf (predicate: string -> bool) : Parser<unit> =
+    let chompIf (predicate: Rune -> bool) : Parser<unit> =
         Base.Parser.chompIf predicate Problem.UnexpectedChar
 
-    let chompWhile (predicate: string -> bool) : Parser<unit> = Base.Parser.chompWhile predicate
+    let chompWhile (predicate: Rune -> bool) : Parser<unit> = Base.Parser.chompWhile predicate
 
     let chompUntil (str: string) : Parser<unit> = Base.Parser.chompUntil (toToken str)
 

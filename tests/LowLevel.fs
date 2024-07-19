@@ -1,8 +1,8 @@
 module Thoth.Parser.Tests.LowLevel
 
 open Fable.Pyxpecto
-open Thoth.Parser
 open Thoth.Parser.LowLevel
+open System.Text
 
 let tests =
     testList
@@ -161,7 +161,7 @@ let tests =
                     testCase
                         "returns 'offset + 1' if the character matches and is encoded on 1 bytes in UTF-16"
                         (fun () ->
-                            let actual = charMatchAt (fun c -> c = "a") 0 "abc"
+                            let actual = charMatchAt (fun rune -> rune = Rune 'a') 0 "abc"
 
                             Assert.equal (actual, CharMatchAtResult.Match 1)
                         )
@@ -169,7 +169,8 @@ let tests =
                     testCase
                         "returns 'offset + 2' if the character matches and is encoded on 2 bytes in UTF-16"
                         (fun () ->
-                            let actual = charMatchAt (fun c -> c = "👍") 0 "👍abc"
+                            let actual =
+                                charMatchAt (fun rune -> rune = Rune.GetRuneAt("👍", 0)) 0 "👍abc"
 
                             Assert.equal (actual, CharMatchAtResult.Match 2)
                         )

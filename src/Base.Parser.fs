@@ -2,6 +2,7 @@ namespace Thoth.Parser.Base
 
 open Thoth.Parser.Base
 open Thoth.Parser.LowLevel
+open System.Text
 
 // Implementation notes:
 // Row start at 1, column start at 1
@@ -450,11 +451,7 @@ module Parser =
                             }
                     }
 
-    let chompIf
-        (predicate: string -> bool)
-        (expecting: 'Problem)
-        : Parser<'Context, 'Problem, unit>
-        =
+    let chompIf (predicate: Rune -> bool) (expecting: 'Problem) : Parser<'Context, 'Problem, unit> =
         Parser
         <| fun state ->
             let newOffset = charMatchAt predicate state.Offset state.Source
@@ -493,7 +490,7 @@ module Parser =
                     }
 
     let rec private chompWhileApply
-        (predicate: string -> bool)
+        (predicate: Rune -> bool)
         (offset: int)
         (row: int)
         (col: int)
@@ -521,7 +518,7 @@ module Parser =
         | CharMatchAtResult.Match newOffset ->
             chompWhileApply predicate newOffset row (col + 1) state
 
-    let chompWhile (predicate: string -> bool) : Parser<'Context, 'Problem, unit> =
+    let chompWhile (predicate: Rune -> bool) : Parser<'Context, 'Problem, unit> =
         Parser
         <| fun state -> chompWhileApply predicate state.Offset state.Row state.Column state
 
@@ -655,14 +652,14 @@ module Parser =
     /// <typeparam name="'Problem">The type of the parsing problem.</typeparam>
     /// <returns>A parser that consumes whitespace characters.</returns>
     let whitespaces<'Context, 'Problem> : Parser<'Context, 'Problem, unit> =
-        chompWhile (fun c -> c = " " || c = "\n" || c = "\r")
+        chompWhile (fun c -> c = Rune(' ') || c = Rune('\n') || c = Rune('\r'))
 
     /// <summary>Parses and consumes spaces characters.</summary>
     /// <typeparam name="'Context">The type of the parsing context.</typeparam>
     /// <typeparam name="'Problem">The type of the parsing problem.</typeparam>
     /// <rFSharp.CommandLineeturns>A parser that consumes spaces characters.</rFSharp.CommandLineeturns>
     let spaces<'Context, 'Problem> : Parser<'Context, 'Problem, unit> =
-        chompWhile (fun c -> c = " ")
+        chompWhile (fun c -> c = Rune(' '))
 
     let keyword (Token(keywordString, expecting)) : Parser<'Context, 'Problem, unit> =
         Parser
@@ -693,14 +690,7 @@ module Parser =
                 // For example, "let" is a keyword, but "letter" is not
                 let isNextCharKeywordCandidate =
                     charMatchAt
-                        (fun (c: string) ->
-                            let mutable iterator = c.EnumerateRunes()
-
-                            if iterator.MoveNext() then
-                                System.Text.Rune.IsLetterOrDigit iterator.Current || c = "_"
-                            else // Should not happen
-                                false
-                        )
+                        (fun (rune: Rune) -> Rune.IsLetterOrDigit rune || rune = Rune('_'))
                         cursorPosition.Offset
                         state.Source
 
@@ -725,61 +715,43 @@ module Parser =
                                 }
                         }
 
-    type internal Sign =
-        | Positive
-        | Negative
-
     let chompDigit<'Context, 'Problem> : Parser<'Context, 'Problem, unit> =
-        chompWhile (fun c -> c >= "0" && c <= "9")
+        chompWhile Rune.IsDigit
 
     let digit<'Context, 'Problem> : Parser<'Context, 'Problem, string> =
         (chompDigit |> getChompedString)
 
-    let int32 invalidSign : Parser<'Context, 'Problem, int> =
+    let int32 invalidSign invalidNumber : Parser<'Context, 'Problem, int> =
         let sign =
             Parser
             <| fun state ->
-                let minusOffset = charMatchAt ((=) "-") state.Offset state.Source
-                let plusOffset = charMatchAt ((=) "+") state.Offset state.Source
+                let minusOffset = charMatchAt ((=) (Rune('-'))) state.Offset state.Source
 
-                match minusOffset, plusOffset with
-                | CharMatchAtResult.Match newOffset, CharMatchAtResult.NoMatch ->
+                match minusOffset with
+                | CharMatchAtResult.Match newOffset ->
                     ParserStep.Success
                         {
                             Backtrackable = true
-                            Value = Negative
+                            Value = -1
                             State = bumpOffset newOffset state
                         }
-                | CharMatchAtResult.NoMatch, CharMatchAtResult.Match newOffset ->
+                | CharMatchAtResult.NoMatch ->
                     ParserStep.Success
                         {
                             Backtrackable = true
-                            Value = Negative
-                            State = bumpOffset newOffset state
-                        }
-                | CharMatchAtResult.NoMatch, CharMatchAtResult.NoMatch ->
-                    ParserStep.Success
-                        {
-                            Backtrackable = false
-                            Value = Positive
+                            Value = 1
                             State = state
                         }
-                | CharMatchAtResult.Match _, CharMatchAtResult.Match _ ->
-                    failwith
-                        "This state is impossible, the next character cannot be both a plus and a minus sign."
-                // If the next character is a newline, we should fail parsing
-                | CharMatchAtResult.NewLine, _
-                | _, CharMatchAtResult.NewLine ->
+                | CharMatchAtResult.NewLine ->
                     ParserStep.Failed
                         {
                             Backtrackable = false
                             Bag = fromState state invalidSign
                         }
 
-        succeed (fun sign value ->
-            match sign with
-            | Positive -> int value
-            | Negative -> -(int value)
+        succeed (fun sign (value: string) -> sign, value) |= sign |= digit
+        |> andThen (fun (sign, value) ->
+            match System.Int32.TryParse value with
+            | true, value -> commit (sign * value)
+            | false, _ -> problem invalidNumber
         )
-        |= sign
-        |= digit
