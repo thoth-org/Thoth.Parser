@@ -96,7 +96,7 @@ let tests =
                 testCase
                     "new line is handled correctly"
                     (fun () ->
-                        let (Parser parse) =
+                        let (ParserFunc parse) =
                             Parser.chompIf (fun c -> c = Rune '\n') Problem.UnexpectedChar
 
                         let actual = parse (State.Initial<obj> "\nSecondLine")
@@ -128,7 +128,7 @@ let tests =
                 testCase
                     "chomp until the predicate fails"
                     (fun () ->
-                        let (Parser parse) =
+                        let (ParserFunc parse) =
                             Parser.chompWhile (fun rune ->
                                 rune.ToString().ToLowerInvariant() = rune.ToString()
                             )
@@ -157,7 +157,7 @@ let tests =
                 testCase
                     "chomp until the end of the string"
                     (fun () ->
-                        let (Parser parse) = Parser.chompWhile (fun _ -> true)
+                        let (ParserFunc parse) = Parser.chompWhile (fun _ -> true)
 
                         let actual = parse (State.Initial<obj> "abc")
 
@@ -183,7 +183,7 @@ let tests =
                 testCase
                     "support new line"
                     (fun () ->
-                        let (Parser parse) =
+                        let (ParserFunc parse) =
                             Parser.chompWhile (fun rune ->
                                 rune.ToString().ToLowerInvariant() = rune.ToString()
                                 || rune = Rune '\n'
@@ -216,7 +216,7 @@ let tests =
             [
 
                 test "returns success if the parser is at the end of the string" {
-                    let (Parser parse) = Parser.exhausted Problem.ExpectingEnd
+                    let (ParserFunc parse) = Parser.exhausted Problem.ExpectingEnd
 
                     let actual =
                         parse
@@ -249,7 +249,7 @@ let tests =
                 }
 
                 test "returns success on empty string" {
-                    let (Parser parse) = Parser.exhausted Problem.ExpectingEnd
+                    let (ParserFunc parse) = Parser.exhausted Problem.ExpectingEnd
 
                     let actual = parse (State.Initial<obj> "")
 
@@ -273,7 +273,7 @@ let tests =
                 }
 
                 test "returns an error if the parser is not at the end of the string" {
-                    let (Parser parse) = Parser.exhausted Problem.ExpectingEnd
+                    let (ParserFunc parse) = Parser.exhausted Problem.ExpectingEnd
 
                     let actual =
                         parse
@@ -345,7 +345,7 @@ let tests =
                 testCase
                     "works with a single character"
                     (fun () ->
-                        let (Parser parse) = Parser.token (mkToken "(*")
+                        let (ParserFunc parse) = Parser.token (mkToken "(*")
 
                         let actual = parse (State.Initial<obj> "(* This is a comment *)")
 
@@ -371,7 +371,7 @@ let tests =
                 testCase
                     "doesn't progress if the token is not found"
                     (fun () ->
-                        let (Parser parse) = Parser.token (mkToken "(*")
+                        let (ParserFunc parse) = Parser.token (mkToken "(*")
 
                         let actual = parse (State.Initial<obj> "This is a comment *)")
 
@@ -401,7 +401,7 @@ let tests =
                 testCase
                     "returns the value if the parser is successful"
                     (fun () ->
-                        let (Parser parse) = Parser.backtrackable (Parser.token (mkToken "(*"))
+                        let (ParserFunc parse) = Parser.backtrackable (Parser.token (mkToken "(*"))
 
                         let actual = parse (State.Initial<obj> "(* This is a comment *)")
 
@@ -431,7 +431,7 @@ let tests =
                 testCase
                     "returns the chomped string"
                     (fun () ->
-                        let (Parser parse) =
+                        let (ParserFunc parse) =
                             Parser.getChompedString (
                                 Parser.chompWhile (fun rune -> rune = Rune 'a')
                             )
@@ -464,7 +464,7 @@ let tests =
                 testCase
                     "chomp all the characters until the end of the string if the subString is not found"
                     (fun () ->
-                        let (Parser parse) = Parser.chumpUntilEndOr "*"
+                        let (ParserFunc parse) = Parser.chumpUntilEndOr "*"
 
                         let actual = parse (State.Initial<obj> "This is a string of characters")
 
@@ -490,7 +490,7 @@ let tests =
                 testCase
                     "chomp all the characters until the subString is found"
                     (fun () ->
-                        let (Parser parse) = Parser.chumpUntilEndOr "*"
+                        let (ParserFunc parse) = Parser.chumpUntilEndOr "*"
 
                         let actual = parse (State.Initial<obj> "This is a string * of characters")
 
@@ -520,7 +520,7 @@ let tests =
                 testCase
                     "rejects if the keywoard is part of a word"
                     (fun () ->
-                        let (Parser parse) = Parser.keyword (mkToken "let")
+                        let (ParserFunc parse) = Parser.keyword (mkToken "let")
 
                         let actual = parse (State.Initial<obj> "letter")
 
@@ -546,7 +546,7 @@ let tests =
                 testCase
                     "accepts if the keyword is the only word"
                     (fun () ->
-                        let (Parser parse) = Parser.keyword (mkToken "let")
+                        let (ParserFunc parse) = Parser.keyword (mkToken "let")
 
                         let actual = parse (State.Initial<obj> "let")
 
@@ -572,7 +572,7 @@ let tests =
                 testCase
                     "accepts if the keyword is at the beginning of the string"
                     (fun () ->
-                        let (Parser parse) = Parser.keyword (mkToken "let")
+                        let (ParserFunc parse) = Parser.keyword (mkToken "let")
 
                         let actual = parse (State.Initial<obj> "let ter = 42")
 
@@ -602,7 +602,7 @@ let tests =
                 testCase
                     "parses a single digit"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "1")
 
@@ -628,7 +628,7 @@ let tests =
                 testCase
                     "parses a multi digit number"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "123")
 
@@ -654,7 +654,7 @@ let tests =
                 testCase
                     "parses a negative number"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "-123")
 
@@ -680,7 +680,7 @@ let tests =
                 testCase
                     "parses a positive number"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "123")
 
@@ -706,7 +706,7 @@ let tests =
                 testCase
                     "rejects if the number is not valid"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "abc")
 
@@ -732,7 +732,7 @@ let tests =
                 testCase
                     "rejects if number is too small"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "-2147483649")
 
@@ -758,7 +758,7 @@ let tests =
                 testCase
                     "rejects if number is too big"
                     (fun () ->
-                        let (Parser parse) = Parser.int32 "Invalid sign" "Invalid number"
+                        let (ParserFunc parse) = Parser.int32 "Invalid sign" "Invalid number"
 
                         let actual = parse (State.Initial<obj> "2147483648")
 

@@ -1,6 +1,5 @@
 namespace Thoth.Parser.Base
 
-open Thoth.Parser.Base
 open Thoth.Parser.LowLevel
 open System.Text
 
@@ -27,6 +26,108 @@ open System.Text
 //      ^
 //      6
 
+type LocatedContext<'Context> =
+    {
+        Row: int
+        Column: int
+        Context: 'Context
+    }
+
+    static member inline Create (row: int) (column: int) (context: 'Context) =
+        {
+            Row = row
+            Column = column
+            Context = context
+        }
+
+type State<'Context> =
+    {
+        Source: string
+        Offset: int
+        Indent: int
+        Context: LocatedContext<'Context> list
+        Row: int
+        Column: int
+    }
+
+    static member inline Initial(source: string) =
+        {
+            Source = source
+            Offset = 0
+            Indent = 0
+            Context = []
+            Row = 1
+            Column = 1
+        }
+
+type DeadEnd<'Context, 'Problem> =
+    {
+        Row: int
+        Column: int
+        Problem: 'Problem
+        ContextStack: LocatedContext<'Context> list // Should it be a separated type?
+    }
+
+    /// <summary>
+    /// Helper function making it easier to create a DeadEnd instance.
+    ///
+    /// This function does not impact the performance because it is inlined.
+    /// </summary>
+    /// <param name="row"></param>
+    /// <param name="column"></param>
+    /// <param name="problem"></param>
+    /// <param name="context"></param>
+    /// <typeparam name="'Context"></typeparam>
+    /// <typeparam name="'Problem"></typeparam>
+    /// <returns>
+    /// A DeadEnd instance.
+    /// </returns>
+    static member inline Create
+        (row: int)
+        (column: int)
+        (problem: 'Problem)
+        (context: LocatedContext<'Context> list)
+        =
+        {
+            Row = row
+            Column = column
+            Problem = problem
+            ContextStack = context
+        }
+
+type Bag<'Context, 'Problem> =
+    | Empty
+    | AddRight of Bag<'Context, 'Problem> * DeadEnd<'Context, 'Problem>
+    | Append of Bag<'Context, 'Problem> * Bag<'Context, 'Problem>
+
+[<RequireQualifiedAccess>]
+module ParserStep =
+
+    type Success<'Context, 'Value> =
+        {
+            Backtrackable: bool
+            Value: 'Value
+            State: State<'Context>
+        }
+
+    type Failed<'Context, 'Problem> =
+        {
+            Backtrackable: bool
+            Bag: Bag<'Context, 'Problem>
+        }
+
+[<RequireQualifiedAccess>]
+type ParserStep<'Context, 'Problem, 'Value> =
+    | Success of ParserStep.Success<'Context, 'Value>
+    | Failed of ParserStep.Failed<'Context, 'Problem>
+
+type Parser<'Context, 'Problem, 'Value> =
+    // Case if named `ParserFunc` to avoid conflict with the module name `Parser`
+    // when referring to the `Parser` module from outside
+    | ParserFunc of (State<'Context> -> ParserStep<'Context, 'Problem, 'Value>)
+
+type Token<'T> = Token of string * 'T
+
 module Parser =
 
     let rec bagToList
@@ -40,7 +141,7 @@ module Parser =
         | Append(bag1, bag2) -> bagToList bag1 (bagToList bag2 list)
 
     let run
-        (Parser parse: Parser<'Context, 'Problem, 'Value>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'Value>)
         (src: string)
         : Result<'Value, DeadEnd<'Context, 'Problem> list>
         =
@@ -71,7 +172,7 @@ module Parser =
         AddRight(Empty, DeadEnd.Create row column problem context)
 
     let succeed (value: 'Value) =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -81,7 +182,7 @@ module Parser =
                 }
 
     let problem (problem: 'Problem) : Parser<'Context, 'Problem, 'Value> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Failed
                 {
@@ -91,10 +192,10 @@ module Parser =
 
     let map
         (func: 'A -> 'B)
-        (Parser parse: Parser<'Context, 'Problem, 'A>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'A>)
         : Parser<'Context, 'Problem, 'B>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parse state with
             | ParserStep.Success step ->
@@ -114,11 +215,11 @@ module Parser =
 
     let map2
         (func: 'A -> 'B -> 'Value)
-        (Parser parseA: Parser<'Context, 'Problem, 'A>)
-        (Parser parseB: Parser<'Context, 'Problem, 'B>)
+        (ParserFunc parseA: Parser<'Context, 'Problem, 'A>)
+        (ParserFunc parseB: Parser<'Context, 'Problem, 'B>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parseA state with
             | ParserStep.Failed stepA ->
@@ -168,10 +269,10 @@ module Parser =
 
     let andThen
         (func: 'A -> Parser<'Context, 'Problem, 'B>)
-        (Parser parseA: Parser<'Context, 'Problem, 'A>)
+        (ParserFunc parseA: Parser<'Context, 'Problem, 'A>)
         : Parser<'Context, 'Problem, 'B>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parseA state with
             | ParserStep.Failed stepA ->
@@ -182,7 +283,7 @@ module Parser =
                     }
 
             | ParserStep.Success stepA ->
-                let (Parser parseB) = func stepA.Value
+                let (ParserFunc parseB) = func stepA.Value
 
                 match parseB stepA.State with
                 | ParserStep.Failed stepB ->
@@ -204,9 +305,9 @@ module Parser =
         (thunk: unit -> Parser<'Context, 'Problem, 'Value>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser
+        ParserFunc
         <| fun state ->
-            let (Parser parse) = thunk ()
+            let (ParserFunc parse) = thunk ()
             parse state
 
     let rec private oneOfApply
@@ -216,7 +317,7 @@ module Parser =
         =
         match parsers with
         | [] -> ParserStep.Failed { Backtrackable = false; Bag = bag }
-        | Parser parse :: rest ->
+        | ParserFunc parse :: rest ->
             match parse state with
             | ParserStep.Success step -> ParserStep.Success step
             | ParserStep.Failed step ->
@@ -229,7 +330,7 @@ module Parser =
         (parsers: Parser<'Context, 'Problem, 'Value> list)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser <| fun state -> oneOfApply state Empty parsers
+        ParserFunc <| fun state -> oneOfApply state Empty parsers
 
     type LoopStep<'State, 'Value> =
         | Loop of 'State
@@ -242,7 +343,7 @@ module Parser =
         (state0: State<'Context>)
         : ParserStep<'Context, 'Problem, 'Value>
         =
-        let (Parser parse) = func state
+        let (ParserFunc parse) = func state
 
         match parse state0 with
         | ParserStep.Success step1 ->
@@ -268,16 +369,16 @@ module Parser =
         (func: 'State -> Parser<'Context, 'Problem, (LoopStep<'State, 'Value>)>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser <| fun state0 -> loopApply false state func state0
+        ParserFunc <| fun state0 -> loopApply false state func state0
 
     // TODO: Is the property `Backtrackable` named correctly?
     // If yes, why do we set it to false in the `backtrackable` parser?
     // I feel like property backtrackable should be named progress
     let backtrackable
-        (Parser parse: Parser<'Context, 'Problem, 'Value>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'Value>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parse state with
             | ParserStep.Success step ->
@@ -296,7 +397,7 @@ module Parser =
                     }
 
     let commit (value: 'Value) : Parser<'Context, 'Problem, 'Value> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -306,7 +407,7 @@ module Parser =
                 }
 
     let getPosition<'Context, 'Problem> : Parser<'Context, 'Problem, Position> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -320,7 +421,7 @@ module Parser =
                 }
 
     let getRow<'Context, 'Problem> : Parser<'Context, 'Problem, int> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -330,7 +431,7 @@ module Parser =
                 }
 
     let getColumn<'Context, 'Problem> : Parser<'Context, 'Problem, int> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -340,7 +441,7 @@ module Parser =
                 }
 
     let getOffset<'Context, 'Problem> : Parser<'Context, 'Problem, int> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -350,7 +451,7 @@ module Parser =
                 }
 
     let getSource<'Context, 'Problem> : Parser<'Context, 'Problem, string> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -360,7 +461,7 @@ module Parser =
                 }
 
     let getIndent<'Context, 'Problem> : Parser<'Context, 'Problem, int> =
-        Parser
+        ParserFunc
         <| fun state ->
             ParserStep.Success
                 {
@@ -374,10 +475,10 @@ module Parser =
 
     let withIndent
         (newIndent: int)
-        (Parser parse: Parser<'Context, 'Problem, 'Value>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'Value>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parse (changeIndent newIndent state) with
             | ParserStep.Success step ->
@@ -399,10 +500,10 @@ module Parser =
 
     let inContext
         (context: 'Context)
-        (Parser parse: Parser<'Context, 'Problem, 'Value>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'Value>)
         : Parser<'Context, 'Problem, 'Value>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match
                 parse (
@@ -422,7 +523,7 @@ module Parser =
             | ParserStep.Failed _ as failedStep -> failedStep
 
     let chompUntil (Token(str, expecting): Token<'Problem>) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             let result = findSubString str state.Offset state.Row state.Column state.Source
 
@@ -448,7 +549,7 @@ module Parser =
                     }
 
     let chompIf (predicate: Rune -> bool) (expecting: 'Problem) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             let newOffset = charMatchAt predicate state.Offset state.Source
 
@@ -515,11 +616,11 @@ module Parser =
             chompWhileApply predicate newOffset row (col + 1) state
 
     let chompWhile (predicate: Rune -> bool) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state -> chompWhileApply predicate state.Offset state.Row state.Column state
 
     let chumpUntilEndOr (str: string) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             let result = findSubString str state.Offset state.Row state.Column state.Source
 
@@ -552,7 +653,7 @@ module Parser =
                     }
 
     let exhausted (problem: 'Problem) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             if state.Source.Length = state.Offset then
                 ParserStep.Success
@@ -588,7 +689,7 @@ module Parser =
         }
 
     let token (Token(str, expecting)) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             let progress = not (String.isEmpty str)
 
@@ -617,10 +718,10 @@ module Parser =
 
     let mapChompedString
         (func: string -> 'A -> 'B)
-        (Parser parse: Parser<'Context, 'Problem, 'A>)
+        (ParserFunc parse: Parser<'Context, 'Problem, 'A>)
         : Parser<'Context, 'Problem, 'B>
         =
-        Parser
+        ParserFunc
         <| fun state ->
             match parse state with
             | ParserStep.Failed step -> ParserStep.Failed step
@@ -659,7 +760,7 @@ module Parser =
         chompWhile (fun c -> c = Rune(' '))
 
     let keyword (Token(keywordString, expecting)) : Parser<'Context, 'Problem, unit> =
-        Parser
+        ParserFunc
         <| fun state ->
             let progress = not (String.isEmpty keywordString)
 
@@ -720,7 +821,7 @@ module Parser =
 
     let int32 invalidSign invalidNumber : Parser<'Context, 'Problem, int> =
         let sign =
-            Parser
+            ParserFunc
             <| fun state ->
                 let minusOffset = charMatchAt ((=) (Rune('-'))) state.Offset state.Source
 

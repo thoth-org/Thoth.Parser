@@ -6,8 +6,7 @@
     <ItemGroup>
         <Compile Include="Prelude.fs" />
         <Compile Include="LowLevel.fs" />
-        <Compile Include="Base.Types.fs" />
-        <Compile Include="Base.Parser.fs" />
+        <Compile Include="Base.fs" />
         <Compile Include="Simple.fs" />
     </ItemGroup>
 </Project>
