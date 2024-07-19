@@ -2,6 +2,7 @@ module Thoth.Parser.Tests.Simple
 
 open Fable.Pyxpecto
 open Thoth.Parser
+open Thoth.Parser.Operators
 
 module Parser =
 

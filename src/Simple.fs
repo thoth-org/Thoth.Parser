@@ -50,9 +50,9 @@ module Parser =
         )
         |> String.concat "\n"
 
-    let keeper = Base.Parser.keeper
+    let keep = Base.Parser.keep
 
-    let ignorer = Base.Parser.ignorer
+    let drop = Base.Parser.drop
 
     let skip (ignoreParser: Parser<'Value>) (parser: Parser<'Value>) : Parser<'Value> =
         Base.Parser.skip ignoreParser parser
@@ -134,9 +134,8 @@ module Parser =
 
     let keyword (str: string) : Parser<unit> = Base.Parser.keyword (toToken str)
 
-[<AutoOpen>]
 module Operators =
 
-    let (|=) = Parser.keeper
+    let (|=) = Parser.keep
 
-    let (|.) = Parser.ignorer
+    let (|.) = Parser.drop

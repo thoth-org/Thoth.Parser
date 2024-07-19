@@ -145,23 +145,19 @@ module Parser =
                             State = stepB.State
                         }
 
-    let keeper
-        (parseFunc: Parser<'Context, 'Problem, ('A -> 'B)>)
+    let keep
         (parseArg: Parser<'Context, 'Problem, 'A>)
+        (parseFunc: Parser<'Context, 'Problem, ('A -> 'B)>)
         : Parser<'Context, 'Problem, 'B>
         =
         map2 (<|) parseFunc parseArg
 
-    let (|=) = keeper
-
-    let ignorer
+    let drop
         (keepParser: Parser<'Context, 'Problem, 'Keep>)
-        (ignoreParser: Parser<'Context, 'Problem, 'Ignore>)
+        (dropParser: Parser<'Context, 'Problem, 'Drop>)
         : Parser<'Context, 'Problem, 'Keep>
         =
-        map2 (fun keep _ -> keep) keepParser ignoreParser
-
-    let (|.) = ignorer
+        map2 (fun keep _ -> keep) keepParser dropParser
 
     let skip
         (ignoreParser: Parser<'Context, 'Problem, 'Ignore>)
@@ -630,6 +626,7 @@ module Parser =
             | ParserStep.Failed step -> ParserStep.Failed step
             | ParserStep.Success step ->
                 let chomped = state.Source.Substring(state.Offset, step.State.Offset - state.Offset)
+
                 let value = func chomped step.Value
 
                 ParserStep.Success
@@ -749,9 +746,17 @@ module Parser =
                             Bag = fromState state invalidSign
                         }
 
-        succeed (fun sign (value: string) -> sign, value) |= sign |= digit
+        succeed (fun sign (value: string) -> sign, value)
+        |> keep sign
+        |> keep digit
         |> andThen (fun (sign, value) ->
             match System.Int32.TryParse value with
             | true, value -> commit (sign * value)
             | false, _ -> problem invalidNumber
         )
+
+module Operators =
+
+    let (|=) = Parser.keep
+
+    let (|.) = Parser.drop
