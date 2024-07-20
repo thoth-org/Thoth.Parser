@@ -7,6 +7,9 @@
         <Compile Include="Prelude.fs" />
         <Compile Include="LowLevel.fs" />
         <Compile Include="Base.fs" />
+        <Compile Include="Base.Numbers.fs" />
+        <Compile Include="Base.Operators.fs" />
         <Compile Include="Simple.fs" />
+        <Compile Include="Simple.Operators.fs" />
     </ItemGroup>
 </Project>

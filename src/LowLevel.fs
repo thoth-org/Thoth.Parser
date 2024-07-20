@@ -8,7 +8,11 @@ type Position =
         Column: int
     }
 
-    static member inline Create (row: int) (column: int) = { Row = row; Column = column }
+    static member inline Create (row: int) (column: int) =
+        {
+            Row = row
+            Column = column
+        }
 
 type CursorPosition =
     {
@@ -69,17 +73,15 @@ let findSubString
     let newText = text.Substring(offset)
     let mutable iterator = newText.EnumerateRunes()
 
-    while offset < target do
+    while iterator.MoveNext() && offset < target do
         let rune = iterator.Current
         offset <- offset + 1
 
         if rune.Value = 10 then // '\n'
             row <- row + 1
-            col <- 2
+            col <- 1
         else if rune.Utf16SequenceLength <> 2 then
             col <- col + 1
-
-        iterator.MoveNext() |> ignore
 
     if index = -1 then
         SubStringResult.NoMatch(Position.Create row col)
@@ -169,7 +171,6 @@ type IsSubStringAtResult =
     | Match of CursorPosition
 
 let isSubStringAt (searchedString: string) (offset: int) (row: int) (col: int) (text: string) =
-
     let searchedStringLength = searchedString.Length
 
     // Memory

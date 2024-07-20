@@ -57,7 +57,7 @@ let tests =
                         )
 
                     testCase
-                        "make sure the same column is returned relativy to row position"
+                        "make sure the same column is returned relative to row position"
                         (fun () ->
                             let actual = findSubString "42" 0 1 1 "Is 42 the answer?"
 
@@ -81,7 +81,7 @@ let tests =
 
                             Assert.equal (
                                 actual,
-                                CursorPosition.Create 8 1 8 |> SubStringResult.Match
+                                CursorPosition.Create 8 1 7 |> SubStringResult.Match
                             )
 
                             let actual = findSubString "👍" 0 1 1 "This is a 👍 great emoji"

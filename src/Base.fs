@@ -25,6 +25,18 @@ open System.Text
 // 42 is the answer!
 //      ^
 //      6
+module private Literals =
+
+    module UInt32 =
+
+        [<Literal>]
+        let limit10 = 429496728u //(System.UInt32.MaxValue - 9u)/10u
+
+        [<Literal>]
+        let maxDiv10 = 429496729u //System.UInt32.MaxValue/10u
+
+        [<Literal>]
+        let maxMod10 = 5u //System.UInt32.MaxValue%10u
 
 type LocatedContext<'Context> =
     {
@@ -254,8 +266,8 @@ module Parser =
         map2 (<|) parseFunc parseArg
 
     let drop
-        (keepParser: Parser<'Context, 'Problem, 'Keep>)
         (dropParser: Parser<'Context, 'Problem, 'Drop>)
+        (keepParser: Parser<'Context, 'Problem, 'Keep>)
         : Parser<'Context, 'Problem, 'Keep>
         =
         map2 (fun keep _ -> keep) keepParser dropParser
@@ -316,7 +328,12 @@ module Parser =
         (parsers: Parser<'Context, 'Problem, 'Value> list)
         =
         match parsers with
-        | [] -> ParserStep.Failed { Backtrackable = false; Bag = bag }
+        | [] ->
+            ParserStep.Failed
+                {
+                    Backtrackable = false
+                    Bag = bag
+                }
         | ParserFunc parse :: rest ->
             match parse state with
             | ParserStep.Success step -> ParserStep.Success step
@@ -813,51 +830,8 @@ module Parser =
                                 }
                         }
 
-    let chompDigit<'Context, 'Problem> : Parser<'Context, 'Problem, unit> =
+    let chompDigits<'Context, 'Problem> : Parser<'Context, 'Problem, unit> =
         chompWhile Rune.IsDigit
 
-    let digit<'Context, 'Problem> : Parser<'Context, 'Problem, string> =
-        (chompDigit |> getChompedString)
-
-    let int32 invalidSign invalidNumber : Parser<'Context, 'Problem, int> =
-        let sign =
-            ParserFunc
-            <| fun state ->
-                let minusOffset = charMatchAt ((=) (Rune('-'))) state.Offset state.Source
-
-                match minusOffset with
-                | CharMatchAtResult.Match newOffset ->
-                    ParserStep.Success
-                        {
-                            Backtrackable = true
-                            Value = -1
-                            State = bumpOffset newOffset state
-                        }
-                | CharMatchAtResult.NoMatch ->
-                    ParserStep.Success
-                        {
-                            Backtrackable = true
-                            Value = 1
-                            State = state
-                        }
-                | CharMatchAtResult.NewLine ->
-                    ParserStep.Failed
-                        {
-                            Backtrackable = false
-                            Bag = fromState state invalidSign
-                        }
-
-        succeed (fun sign (value: string) -> sign, value)
-        |> keep sign
-        |> keep digit
-        |> andThen (fun (sign, value) ->
-            match System.Int32.TryParse value with
-            | true, value -> commit (sign * value)
-            | false, _ -> problem invalidNumber
-        )
-
-module Operators =
-
-    let (|=) = Parser.keep
-
-    let (|.) = Parser.drop
+    let digits<'Context, 'Problem> : Parser<'Context, 'Problem, string> =
+        (chompDigits |> getChompedString)
