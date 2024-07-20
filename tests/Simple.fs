@@ -42,20 +42,19 @@ let tests =
     testList
         "Parser.Simple"
         [
-            testCase "Parser.boolean works with 'false'"
-            <| fun _ ->
+            test "Parser.boolean works with 'false'" {
                 let result = Parser.run Parser.boolean "false"
 
                 Assert.equal (result, Ok false)
+            }
 
-            testCase "Parser.boolean works with 'true'"
-            <| fun _ ->
+            test "Parser.boolean works with 'true'" {
                 let result = Parser.run Parser.boolean "true"
 
                 Assert.equal (result, Ok true)
+            }
 
-            testCase "Parser.boolean fails with 'tru'"
-            <| fun _ ->
+            test "Parser.boolean fails with 'tru'" {
                 let result = Parser.run Parser.boolean "tru"
 
                 Assert.equal (
@@ -74,6 +73,7 @@ let tests =
                             }
                         ]
                 )
+            }
 
             testList
                 "Point"

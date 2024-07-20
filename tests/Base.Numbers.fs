@@ -4,7 +4,6 @@ open Fable.Pyxpecto
 open Thoth.Parser.Base
 open Thoth.Parser.Base.Numbers
 open Thoth.Parser.Tests.Prelude
-open System.Text
 
 module Errors =
 
