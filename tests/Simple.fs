@@ -4,6 +4,12 @@ open Fable.Pyxpecto
 open Thoth.Parser
 open Thoth.Parser.Operators
 
+type Point =
+    {
+        X: int
+        Y: int
+    }
+
 module Parser =
 
     let boolean =
@@ -13,6 +19,24 @@ module Parser =
 
                 Parser.succeed false |. (Parser.keyword "false")
             ]
+
+    let point =
+        Parser.succeed (fun x y ->
+            {
+                X = x
+                Y = y
+            }
+        )
+        |. Parser.token "("
+        |. Parser.spaces
+        |= Parser.int32
+        |. Parser.spaces
+        |. Parser.token ","
+        |. Parser.spaces
+        |= Parser.int32
+        |. Parser.spaces
+        |. Parser.token ")"
+        |. Parser.exhausted
 
 let tests =
     testList
@@ -51,25 +75,113 @@ let tests =
                         ]
                 )
 
-            test "Version" {
-                let pDot = Parser.token "."
+            testList
+                "Point"
+                [
+                    test "Parser.point works with '(1, 2)'" {
+                        let result = Parser.run Parser.point "(1, 2)"
 
-                let parser =
-                    Parser.succeed (fun (major: int32) (minor: int32) (patch: int32) ->
-                        (major, minor, patch)
-                    )
-                    |> Parser.keep Parser.int32
-                    |> Parser.drop pDot
-                    |> Parser.keep Parser.int32
-                    |> Parser.drop pDot
-                    |> Parser.keep Parser.int32
+                        Assert.equal (
+                            result,
+                            Ok
+                                {
+                                    X = 1
+                                    Y = 2
+                                }
+                        )
+                    }
 
-                let result = Parser.run parser "1T2.39999"
+                    test "Parser.point fails with '(1, 2'" {
+                        let result = Parser.run Parser.point "(1, 2"
 
-                // Assert.equal (result, Ok(1, 2, 3))
-                match result with
-                | Ok _ -> failwith "Expected an error"
-                | Error deadEnds -> printfn "%A" (Parser.deadEndsToString deadEnds)
+                        Assert.equal (
+                            result,
+                            Error
+                                [
+                                    {
+                                        Row = 1
+                                        Column = 6
+                                        Problem = Problem.Expecting ")"
+                                    }
+                                ]
+                        )
+                    }
 
-            }
+                    test "Parser.point fails if not all the characters are consumed" {
+                        let result = Parser.run Parser.point "(1, 2)xxx"
+
+                        Assert.equal (
+                            result,
+                            Error
+                                [
+                                    {
+                                        Row = 1
+                                        Column = 7
+                                        Problem = Problem.ExpectingEnd
+                                    }
+                                ]
+                        )
+                    }
+
+                    test "Parser.point fails if the first number is missing" {
+                        let result = Parser.run Parser.point "(, 2)"
+
+                        Assert.equal (
+                            result,
+                            Error
+                                [
+                                    {
+                                        Row = 1
+                                        Column = 2
+                                        Problem = Problem.ExpectingInt32
+                                    }
+                                ]
+                        )
+                    }
+
+                    test "Parser.point fails if the comma is missing" {
+                        let result = Parser.run Parser.point "(1 2)"
+
+                        Assert.equal (
+                            result,
+                            Error
+                                [
+                                    {
+                                        Row = 1
+                                        Column = 4
+                                        Problem = Problem.Expecting ","
+                                    }
+                                ]
+                        )
+                    }
+
+                    test "Parser.point fails if the second number is missing" {
+                        let result = Parser.run Parser.point "(1,)"
+
+                        Assert.equal (
+                            result,
+                            Error
+                                [
+                                    {
+                                        Row = 1
+                                        Column = 4
+                                        Problem = Problem.ExpectingInt32
+                                    }
+                                ]
+                        )
+                    }
+
+                    test "Parser.point works with spaces" {
+                        let result = Parser.run Parser.point "(  1    ,   2    )"
+
+                        Assert.equal (
+                            result,
+                            Ok
+                                {
+                                    X = 1
+                                    Y = 2
+                                }
+                        )
+                    }
+                ]
         ]
